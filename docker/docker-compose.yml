@@ -1,0 +1,82 @@
+version: '2'
+services:
+    rabbitmq:
+        image: rabbitmq:3-management
+        container_name: rabbitmq
+        expose:
+            - 15672
+        ports:
+            - 5672:5672
+            - 15672:15672
+        networks:
+            - spring-cloud-network
+    config-server:
+        container_name: config-server
+        build:
+            context: .
+            dockerfile: Dockerfile.server
+        image: config-server:latest
+        entrypoint: /opt/spring-cloud/bin/config-server-entrypoint.sh
+        expose:
+            - 8888
+        ports:
+            - 8888:8888
+        networks:
+            - spring-cloud-network
+        volumes:
+            - spring-cloud-config-repo:/var/lib/spring-cloud/config-repo
+        logging:
+            driver: json-file
+    employee-service:
+        container_name: employee-service
+        build:
+            context: .
+            dockerfile: Dockerfile.employee_service
+        image: employee-service:latest
+        entrypoint: /opt/spring-cloud/bin/employee-service-entrypoint.sh
+        environment:
+            SPRING_APPLICATION_JSON: '{"spring": {"cloud": {"config": {"uri": "http://config-server:8888"}}}}'
+        expose:
+            - 8082
+        ports:
+            - 8082:8082
+        networks:
+            - spring-cloud-network
+        links:
+            - config-server:config-server
+            - rabbitmq:rabbitmq
+        depends_on:
+            - config-server
+            - rabbitmq
+        logging:
+            driver: json-file
+    department-service:
+        container_name: department-service
+        build:
+            context: .
+            dockerfile: Dockerfile.department_service
+        image: department-service:latest
+        entrypoint: /opt/spring-cloud/bin/department-service-entrypoint.sh
+        environment:
+            SPRING_APPLICATION_JSON: '{"spring": {"cloud": {"config": {"uri": "http://config-server:8888"}}}}'
+        expose:
+            - 8081
+        ports:
+            - 8081:8081
+        networks:
+            - spring-cloud-network
+        links:
+            - config-server:config-server
+            - rabbitmq:rabbitmq
+        depends_on:
+            - config-server
+            - rabbitmq
+        logging:
+            driver: json-file
+    
+networks:
+    spring-cloud-network:
+        driver: bridge
+volumes:
+    spring-cloud-config-repo:
+        external: true

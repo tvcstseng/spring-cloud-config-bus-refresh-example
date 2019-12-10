@@ -1,0 +1,18 @@
+FROM alpine-java:base
+MAINTAINER ttstudios.eu
+RUN apk --no-cache add netcat-openbsd && apk add dos2unix && apk add curl
+COPY files/config-server.jar /opt/spring-cloud/lib/
+COPY files/config-server-entrypoint.sh /opt/spring-cloud/bin/
+ENV SPRING_APPLICATION_JSON='{"spring": {"cloud": {"config": {"server": {"git": {"uri": "https://github.com/tvcstseng/cloud-config.git", "clone-on-start": true}}}}}}'
+
+VOLUME /var/lib/spring-cloud/config-repo
+EXPOSE 8888
+
+# 1. To start immediately
+# ENTRYPOINT ["/usr/bin/java"]
+# CMD ["-jar", "/opt/spring-cloud/lib/config-server.jar"]
+
+# OR
+# 2. To start delayed
+RUN dos2unix /opt/spring-cloud/bin/config-server-entrypoint.sh && apk del dos2unix && rm -rf /var/lib/apt/lists/*
+RUN chmod 755 /opt/spring-cloud/bin/config-server-entrypoint.sh
